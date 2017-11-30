@@ -2,12 +2,18 @@ import os
 import re
 import nltk
 import numpy as np
+import pandas as pd
 from sklearn import feature_extraction
 from tqdm import tqdm
-
+import gensim
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import normalize
+from functools import reduce
 
 _wnl = nltk.WordNetLemmatizer()
-
+token_pattern = r'(?u)\b\w\w+\b'
+stopwords = set(nltk.corpus.stopwords.words('english'))
+english_stemmer = nltk.stem.SnowballStemmer('english')
 
 def normalize_word(w):
     return _wnl.lemmatize(w).lower()
@@ -22,7 +28,6 @@ def clean(s):
 
     return " ".join(re.findall(r'\w+', s, flags=re.UNICODE)).lower()
 
-
 def remove_stopwords(l):
     # Removes stopwords from a list of tokens
     return [w for w in l if w not in feature_extraction.text.ENGLISH_STOP_WORDS]
@@ -36,7 +41,83 @@ def gen_or_load_feats(feat_fn, headlines, bodies, feature_file):
     return np.load(feature_file)
 
 
+def preprocess_data(line,
+                    token_pattern=token_pattern,
+                    exclude_stopword=True,
+                    stem=True):
+    token_pattern = re.compile(token_pattern, flags = re.UNICODE)
+    tokens = [x.lower() for x in token_pattern.findall(line)]
+    tokens_stemmed = tokens
+    if stem:
+        tokens_stemmed = stem_tokens(tokens, english_stemmer)
+    if exclude_stopword:
+        tokens_stemmed = [x for x in tokens_stemmed if x not in stopwords]
+    return tokens_stemmed
 
+def cosine_sim(x, y):
+    try:
+        if type(x) is np.ndarray: x = x.reshape(1, -1) # get rid of the warning
+        if type(y) is np.ndarray: y = y.reshape(1, -1)
+        d = cosine_similarity(x, y)
+        d = d[0][0]
+    except:
+        print (x)
+        print (y)
+        d = 0.
+    return d
+
+def gen_word2vec_feats(headlines, bodies):
+    #for idx, headline in enumerate(headlines):
+        #headlines[idx] = clean(headline)
+    #for idx, body in enumerate(bodies):
+        #bodies[idx] = clean(body)
+
+    d = { 'Headline': headlines, 'articleBody': bodies}
+    df = pd.DataFrame(data=d)
+    print ('generating word2vec features')
+    df["Headline_unigram_vec"] = df["Headline"].map(lambda x: preprocess_data(x, exclude_stopword=False, stem=False))
+    df["articleBody_unigram_vec"] = df["articleBody"].map(lambda x: preprocess_data(x, exclude_stopword=False, stem=False))
+
+    #headline_unigram = []
+    #for headline in df["Headline"]:
+        #headline_unigram.append(ngrams(headline, 1))
+
+    #body_unigram = []
+    #for body in df["articleBody"]:
+        #body_unigram.append(ngrams(body, 1))
+
+    #df["Headline_unigram_vec"] = headline_unigram;
+    #df["articleBody_unigram_vec"] = body_unigram;
+
+    model = gensim.models.KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True)
+    print ('model loaded')
+
+    Headline_unigram_array = df['Headline_unigram_vec'].values
+    headlineVec = map(lambda x: reduce(np.add, [model[y] for y in x if y in model], [0.]*300), Headline_unigram_array)
+    headlineVec = list(headlineVec)
+    #print ('headlineVec:')
+    #print (headlineVec)
+    #print ('type(headlineVec)')
+    #print (type(headlineVec))
+    #headlineVec = np.exp(headlineVec)
+    headlineVec = normalize(headlineVec)
+    #headlineVec = np.hstack(headlineVec)
+
+
+
+    Body_unigram_array = df['articleBody_unigram_vec'].values
+    bodyVec = map(lambda x: reduce(np.add, [model[y] for y in x if y in model], [0.]*300), Body_unigram_array)
+    bodyVec = list(bodyVec)
+    bodyVec = normalize(bodyVec)
+    #bodyVec = np.hstack(bodyVec)
+
+    # compute cosine similarity between headline/body word2vec features
+    #simVec = []
+    #for h in headlineVec:
+        #for b in bodyVec:
+            #simVec.append(cosine_sim(h,b))
+    simVec = list(map(cosine_sim, headlineVec, bodyVec))
+    return headlineVec, bodyVec, simVec
 
 def word_overlap_features(headlines, bodies):
     X = []

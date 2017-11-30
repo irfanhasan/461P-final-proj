@@ -2,7 +2,7 @@ import sys
 import numpy as np
 
 from sklearn.ensemble import GradientBoostingClassifier
-from feature_engineering import refuting_features, polarity_features, hand_features, gen_or_load_feats
+from feature_engineering import refuting_features, polarity_features, hand_features, gen_or_load_feats, gen_word2vec_feats
 from feature_engineering import word_overlap_features
 from utils.dataset import DataSet
 from utils.generate_test_splits import kfold_split, get_stances_for_folds
@@ -23,13 +23,15 @@ def generate_features(stances,dataset,name):
     X_refuting = gen_or_load_feats(refuting_features, h, b, "features/refuting."+name+".npy")
     X_polarity = gen_or_load_feats(polarity_features, h, b, "features/polarity."+name+".npy")
     X_hand = gen_or_load_feats(hand_features, h, b, "features/hand."+name+".npy")
+    headVec, bodyVec, simVec = gen_word2vec_feats(h,b)
 
-    X = np.c_[X_hand, X_polarity, X_refuting, X_overlap]
+    X = np.c_[X_hand, X_polarity, X_refuting, X_overlap, headVec, bodyVec, simVec]
     return X,y
 
 if __name__ == "__main__":
     check_version()
     parse_params()
+
 
     #Load the training dataset and generate folds
     d = DataSet()
