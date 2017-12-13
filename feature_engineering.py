@@ -1,6 +1,7 @@
 import os
 import re
 import nltk
+import string
 import numpy as np
 import pandas as pd
 from sklearn import feature_extraction
@@ -154,6 +155,64 @@ def refuting_features(headlines, bodies):
         clean_headline = clean(headline)
         clean_headline = get_tokenized_lemmas(clean_headline)
         features = [1 if word in clean_headline else 0 for word in _refuting_words]
+        X.append(features)
+    return X
+
+
+# Checks presence of a Question mark in the headline
+def question_features(headlines, bodies):
+    X = []
+    for i, (headline, body) in tqdm(enumerate(zip(headlines, bodies))):
+        if '?' in headline:
+            X.append(1)
+        else:
+            X.append(0)
+    return X
+
+# Count of capital letters in the body
+def punctuation_features(headlines, bodies):
+    letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    X = []
+    for i, (headline, body) in tqdm(enumerate(zip(headlines, bodies))):
+        count = 0
+        for c in body:
+            if c in letters:
+                count+=1
+        X.append(count)
+    return X
+
+
+# Count of punctuation in the body
+def cap_features(headlines, bodies):
+    X = []
+    for i, (headline, body) in tqdm(enumerate(zip(headlines, bodies))):
+        count = 0
+        for c in body:
+            if c in string.punctuation:
+                count+=1
+        X.append(count)
+    return X
+
+
+def supporting_features(headlines, bodies):
+    _supporting_words = [
+        'real',
+        'yes',
+        'true',
+        'support',
+        'good',
+        'agree',
+        'yeah',
+        'approve',
+        'advocate',
+        'endorse',
+        'uphold'
+    ]
+    X = []
+    for i, (headline, body) in tqdm(enumerate(zip(headlines, bodies))):
+        clean_headline = clean(headline)
+        clean_headline = get_tokenized_lemmas(clean_headline)
+        features = [1 if word in clean_headline else 0 for word in _supporting_words]
         X.append(features)
     return X
 

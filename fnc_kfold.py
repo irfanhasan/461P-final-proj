@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.ensemble import GradientBoostingClassifier
 from feature_engineering import refuting_features, polarity_features, hand_features, gen_or_load_feats, gen_word2vec_feats
 from feature_engineering import word_overlap_features
+from feature_engineering import supporting_features, punctuation_features, question_features, cap_features
 from utils.dataset import DataSet
 from utils.generate_test_splits import kfold_split, get_stances_for_folds
 from utils.score import report_score, LABELS, score_submission
@@ -23,9 +24,15 @@ def generate_features(stances,dataset,name):
     X_refuting = gen_or_load_feats(refuting_features, h, b, "features/refuting."+name+".npy")
     X_polarity = gen_or_load_feats(polarity_features, h, b, "features/polarity."+name+".npy")
     X_hand = gen_or_load_feats(hand_features, h, b, "features/hand."+name+".npy")
+    
+    X_supporting = gen_or_load_feats(supporting_features, h, b, "features/supporting."+name+".npy")
+    X_punctuation = gen_or_load_feats(punctuation_features, h, b, "features/punctuation."+name+".npy")
+    X_question = gen_or_load_feats(question_features, h, b, "features/question."+name+".npy")
+    X_cap = gen_or_load_feats(cap_features, h, b, "features/cap."+name+".npy")
+    
     headVec, bodyVec, simVec = gen_word2vec_feats(h,b)
 
-    X = np.c_[X_hand, X_polarity, X_refuting, X_overlap, headVec, bodyVec, simVec]
+    X = np.c_[X_hand, X_polarity, X_refuting, X_overlap, X_supporting, X_punctuation, X_question, X_cap, headVec, bodyVec, simVec]
     return X,y
 
 if __name__ == "__main__":
