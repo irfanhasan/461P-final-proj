@@ -10,6 +10,7 @@ import gensim
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import normalize
 from functools import reduce
+from utils import topic_models
 
 _wnl = nltk.WordNetLemmatizer()
 token_pattern = r'(?u)\b\w\w+\b'
@@ -215,6 +216,14 @@ def supporting_features(headlines, bodies):
         features = [1 if word in clean_headline else 0 for word in _supporting_words]
         X.append(features)
     return X
+
+
+def latent_semantic_indexing(headlines, bodies):
+    """
+    Performs Latent Semantic Indexing on model.
+    """
+    return topic_models.latent_semantic_indexing_gensim_concat(headlines, bodies, n_topics=300, include_holdout=True,
+                                                               include_unlbled_test=False)
 
 
 def polarity_features(headlines, bodies):
